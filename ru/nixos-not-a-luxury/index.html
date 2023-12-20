@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>NixOS</title>
+
+    <link rel="stylesheet" href="/dist/reset.css">
+    <link rel="stylesheet" href="/dist/reveal.css">
+    <link rel="stylesheet" href="/dist/theme/catppuccin.css">
+    
+    <!-- Theme used for syntax highlighted code -->
+    <link rel="stylesheet" href="/plugin/highlight/catppuccin-macchiato.css">
+
+  </head>
+  <body>
+
+    <div class="reveal">
+      <div class="slides">
+        <section data-markdown="slides.md" data-separator="^\n---\n$" data-separator-vertical="^\n--\n$"></section>
+      </div>
+    </div>
+
+    <script src="/dist/reveal.js"></script>
+    <script src="/plugin/notes/notes.js"></script>
+    <script src="/plugin/markdown/markdown.js"></script>
+    <script src="/plugin/highlight/highlight.js"></script>
+    <script>
+      Reveal.initialize({
+          hash: true,
+
+          plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+      });
+    </script>
+    <script src="https://thecode.media/wp-content/uploads/2019/12/snowfall2020.js"></script>
+  </body>
+</html>
