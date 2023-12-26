@@ -233,7 +233,7 @@ section.has-light-background, section.has-light-background h1, section.has-light
   display: block;
   padding: 5px;
   overflow: auto;
-  max-height: 450px;
+  max-height: 500px;
   word-wrap: normal;
 }
 
@@ -361,4 +361,27 @@ section.has-light-background, section.has-light-background h1, section.has-light
   .backgrounds {
     background-color: var(--r-background-color);
   }
+}
+
+/*********************************************
+ * SCROLLBARS
+ *********************************************/
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: var(--r-main-color);
+  border-radius: 5px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: var(--r-selection-color);
 }
