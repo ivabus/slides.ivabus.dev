@@ -1,3 +1,5 @@
+<img src="nixos_logo.svg" width="30%" height="30%">
+
 ## NixOS
 
 Не роскошь, а новый подход к построению дистрибутивов Linux
