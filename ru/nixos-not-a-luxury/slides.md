@@ -8,6 +8,10 @@
 
 ---
 
+## Что такое "обычный" дистрибутив?
+
+---
+
 ## Что такое NixOS?
 
 Декларативный, атомарный и воспроизводимый дистрибутив Linux
@@ -165,24 +169,49 @@ in {
 
 --
 
+```nix[]
+{ pkgs ? import <nixpkgs> { }, ... }:
+let
+  version = "0e82fce377c71b5535448ec00243a580e235393d";
+  repo = builtins.fetchGit {
+    url = "https://github.com/ivabus/slides.ivabus.dev";
+    rev = version;
+  };
+in pkgs.stdenv.mkDerivation {
+  inherit version;
+  name = "slides-ivabus-dev";
+  src = repo;
+
+  buildInputs = [ ];
+  nativeBuildInputs = with pkgs; [ rsync ];
+
+  installPhase = ''
+    mkdir -p $out
+    rsync -a . $out/ --exclude README.md --exclude LICENSE
+  '';
+}
+
+```
+
+--
+
 ```nix[1-20|2,4-6|7|8-18|13|14-16]
 { config, lib, pkgs, ... }:
-let cfg = config.my.roles.server.ivabus-dev;
+let cfg = config.my.roles.server.slides-ivabus-dev;
 in {
-  options.my.roles.server.ivabus-dev.enable =
-    lib.mkEnableOption "Serve ivabus.dev";
+  options.my.roles.server.slides-ivabus-dev.enable =
+    lib.mkEnableOption "Serve slides.ivabus.dev";
   config = lib.mkIf (cfg.enable) {
     my.roles.server.nginx.enable = true;
     services.nginx = {
-      virtualHosts."ivabus.dev" = {
+      virtualHosts."slides.ivabus.dev" = {
         forceSSL = true;
         enableACME = true;
         http3 = true;
-        root = pkgs.callPackage ../../pkgs/ivabus-dev.nix { };
+        root = pkgs.callPackage ../../pkgs/slides-ivabus-dev.nix { };
         extraConfig = ''
           error_page 404 /404.html;
         '';
-        serverAliases = [ "www.ivabus.dev" ];
       };
     };
   };
@@ -201,7 +230,7 @@ let
 in {
   imports = [ my.modules ./hardware.nix ];
 
-  my.roles.server.ivabus-dev.enable = true;
+  my.roles.server.slides-ivabus-dev.enable = true;
 
   my.features.secrets = true;
 
@@ -215,156 +244,6 @@ in {
   };
 }
 
-```
-
----
-
-## Упаковка сервиса на Rust
-
-```nix[1-17|1-3,5,9|]
-{ pkgs ? import <nixpkgs> { system = builtins.currentSystem; },
-lib ? pkgs.lib, rustPlatform ? pkgs.rustPlatform,
-fetchCrate ? pkgs.fetchCrate }:
-
-rustPlatform.buildRustPackage rec {
-  pname = "urouter";
-  version = "0.6.0";
-
-  src = fetchCrate {
-    inherit pname version;
-    sha256 = "sha256-KfoZ9NinD6PCL4M3U4sB8GHdbDLeRW7uFeQpGxmzJ90=";
-  };
-
-  cargoSha256 = "sha256-VfoF4hzWf5j2QtXyS/jFYCMfowl47YcAjxs2PV9C6oo=";
-
-  nativeBuildInputs = [ pkgs.pkg-config ];
-}
-```
-
---
-
-## Создание удобных опций
-
-```nix[|4|9-25|31-47|59-75]
-{ config, lib, pkgs, ... }:
-let
-  cfg = config.my.roles.server.urouter;
-  aliasFormat = pkgs.formats.json { };
-in {
-  options.my.roles.server.urouter = {
-    enable = lib.mkEnableOption "Enable urouter";
-
-    settings = lib.mkOption rec {
-      type = aliasFormat.type;
-      apply = lib.recursiveUpdate default;
-      default = { alias = [ ]; };
-      example = {
-        alias = [
-          {
-            uri = "/";
-            alias = { url = "https://someurl"; };
-          }
-          {
-            uri = "/";
-            alias = { file = "some_file"; };
-            agent = { regex = "^curl/[0-9].[0-9].[0-9]$"; };
-          }
-        ];
-      };
-      description = lib.mdDoc ''
-        alias.json configuration in Nix format.
-      '';
-    };
-
-    dir = lib.mkOption {
-      type = lib.types.str;
-      default = "/var/urouter";
-      example = "/home/user/urouter";
-    };
-
-    address = lib.mkOption {
-      type = lib.types.str;
-      default = "0.0.0.0";
-      example = "0200::1";
-    };
-
-    port = lib.mkOption {
-      type = lib.types.ints.u16;
-      default = 8080;
-      example = 80;
-    };
-
-    openFirewall = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = lib.mdDoc "Open TCP port in the firewall";
-    };
-  };
-  config = lib.mkIf (cfg.enable) {
-    networking.firewall.allowedTCPPorts =
-      lib.mkIf cfg.openFirewall [ cfg.port ];
-
-    systemd.services.urouter = {
-      description = "urouter HTTP Service";
-      after = [ "network.target" ];
-      wantedBy = [ "multi-user.target" ];
-      serviceConfig = {
-        ExecStart = ''
-          ${
-            pkgs.callPackage ../../pkgs/urouter.nix { }
-          }/bin/urouter --alias-file-is-set-not-a-list --alias-file ${
-            aliasFormat.generate "alias.json" cfg.settings
-          } --dir ${cfg.dir} --address ${cfg.address} --port ${
-            builtins.toString cfg.port
-          }
-        '';
-        BindReadOnlyPaths = [ cfg.dir ];
-      };
-    };
-  };
-}
-```
-
---
-
-## Использование
-
-```nix[|3-25|26-34]
-{ config, pkgs, lib, ... }:
-rec {
-  my.server.urouter = {
-    enable = true;
-    settings = {
-      alias = [
-        {
-          uri = "/";
-          alias = { url = "https://ivabus.dev"; };
-        }
-        {
-          uri = "/";
-          alias = { file = "dotfiles"; };
-          agent = { regex = "^curl/[0-9].[0-9].[0-9]$"; };
-        }
-        {
-          uri = "d";
-          alias = { file = "dotfiles"; };
-        }
-      ];
-    };
-    dir = "/var/urouter";
-    port = 8090;
-    address = "127.0.0.1";
-  };
-  my.roles.server.nginx.enable = true;
-  services.nginx.virtualHosts."iva.bz" = {
-    locations."/".proxyPass = "http://${
-      config.my.server.urouter.address}:${config.my.server.urouter.port}";
-    enableACME = true;
-    addSSL = true;
-    http3 = true;
-    serverAliases = [ "www.iva.bz" ];
-  };
-}
 ```
 
 ---
