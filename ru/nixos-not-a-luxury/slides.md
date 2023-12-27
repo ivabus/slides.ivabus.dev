@@ -387,6 +387,19 @@ else {
 
 --
 
+## Подключение модуля
+
+```nix[]
+let
+  my = import ../.;
+  secrets = my.secrets { inherit config; };
+{
+  _module.args.secrets = secrets;
+}
+```
+
+--
+
 ## Взаимодействие с секретиками
 
 ```nix[|1,6,12,13]
